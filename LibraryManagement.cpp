@@ -2,241 +2,622 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <regex>   // For email validation
+#include <ctime>   // For getting current timestamp
+#include <iomanip> // For table formatting
 #include <limits>
+#include <unordered_map>
 
 using namespace std;
 
 // Book Record Class
-class Record {
+class Record
+{
 public:
-    string name;
-    int number;
+    string bookName;
     string author;
     string isbn;
-    bool issued; // Track if the book is issued
+    int copies;
 
-    Record() : issued(false) {}
-
-    Record(string n, int num, string a, string i)
-        : name(n), number(num), author(a), isbn(i), issued(false) {}
+    Record(string bName, string auth, string id, int num)
+    {
+        bookName = bName;
+        author = auth;
+        isbn = id;
+        copies = num;
+    }
 };
 
-// Library Management System
-class LMS {
+// Student Class
+class Student
+{
+public:
+    string firstName;
+    string lastName;
+    string regNumber;
+    string phone;
+    string email;
+
+    Student(string fName, string lName, string reg, string ph, string em)
+    {
+        firstName = fName;
+        lastName = lName;
+        regNumber = reg;
+        phone = ph;
+        email = em;
+    }
+};
+
+// Library Management System Class
+class LMS
+{
 private:
+    string librarianPassword = "lib123";
+    string counterPassword = "counter123";
+    int librarianAttempts = 5;
+    int counterAttempts = 5;
     vector<Record> books;
-    string librarianPassword = "admin123";
-    string userAPassword = "userA";  // User A - Issue books
-    string userBPassword = "userB";  // User B - Return books
+    vector<Student> students;
+    unordered_map<string, int> studentBookCount;
 
 public:
-    LMS() { loadBooks(); }
-
-    // Load books from file
-    void loadBooks() {
-        ifstream file("books.txt");
-        if (file) {
-            books.clear();  // Clear existing book records
-            string name, author, isbn;
-            int number;
-            bool issued;
-            while (file >> number >> issued) {
-                file.ignore();
-                getline(file, name);
-                getline(file, author);
-                getline(file, isbn);
-                books.push_back(Record(name, number, author, isbn));
-                books.back().issued = issued;
-            }
-            file.close();
-        }
+    LMS()
+    {
+        loadBooks();
+        loadStudents();
     }
 
-    // Save books to file
-    void saveBooks() {
-        ofstream file("books.txt");
-        for (auto &book : books) {
-            file << book.number << " " << book.issued << "\n"
-                 << book.name << "\n"
-                 << book.author << "\n"
-                 << book.isbn << "\n";
+    void loadBooks()
+    {
+        ifstream file("books.txt");
+        if (!file)
+            return;
+        string bName, auth, id;
+        int num;
+        while (file >> bName >> auth >> id >> num)
+        {
+            books.push_back(Record(bName, auth, id, num));
         }
         file.close();
     }
 
-    // Add a book
-    void addBook() {
-        string name, author, isbn;
-        int number;
-
-        cin.ignore(); // Clear input buffer
-        cout << "Enter book name: ";
-        getline(cin, name);  // Use getline to read full book name
-
-        cout << "Enter book number: ";
-        while (!(cin >> number)) { // Validate integer input
-            cout << "Invalid input! Enter a valid number: ";
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    void loadStudents()
+    {
+        ifstream file("students.txt");
+        if (!file)
+            return;
+        string fName, lName, regNum, phone, email;
+        while (file >> fName >> lName >> regNum >> phone >> email)
+        {
+            students.push_back(Student(fName, lName, regNum, phone, email));
         }
+        file.close();
+    }
 
-        cin.ignore(); // Clear buffer before next input
-        cout << "Enter author: ";
-        getline(cin, author);
+    void saveBooks()
+    {
+        ofstream file("books.txt");
+        for (auto &book : books)
+        {
+            file << book.bookName << " " << book.author << " " << book.isbn << " " << book.copies << endl;
+        }
+        file.close();
+    }
 
-        cout << "Enter ISBN: ";
-        getline(cin, isbn);
+    void saveStudents()
+    {
+        ofstream file("students.txt");
+        for (auto &student : students)
+        {
+            file << student.firstName << " " << student.lastName << " " << student.regNumber << " "
+                 << student.phone << " " << student.email << endl;
+        }
+        file.close();
+    }
 
-        books.push_back(Record(name, number, author, isbn));
+    void addStudent()
+{
+    string fName, lName, regNum, phone, email;
+    cout << "\nEnter first name: ";
+    cin >> fName;
+    cout << "Enter last name: ";
+    cin >> lName;
+    cout << "Enter registration number (8 digits): ";
+    cin >> regNum;
+    while (regNum.length() != 8 || !all_of(regNum.begin(), regNum.end(), ::isdigit))
+    {
+        cout << "Invalid registration number! It must be an 8-digit number: ";
+        cin >> regNum;
+    }
+
+    // Check if student already exists
+    for (const auto &student : students)
+    {
+        if (student.regNumber == regNum)
+        {
+            cout << "\nError: A student with this registration number already exists!\n";
+            return;
+        }
+    }
+
+    cout << "Enter phone number (starting with 6, 7, 8, or 9): ";
+    cin >> phone;
+    while (!(phone[0] == '6' || phone[0] == '7' || phone[0] == '8' || phone[0] == '9') || phone.length() != 10)
+    {
+        cout << "Invalid phone number! It must start with 6, 7, 8, or 9 and be 10 digits long: ";
+        cin >> phone;
+    }
+
+    cout << "Enter email address: ";
+    cin >> email;
+    while (!regex_match(email, regex("^[a-zA-Z0-9._%+-]+@(gmail\\.com|outlook\\.com|lpu\\.in)$")))
+    {
+        cout << "Invalid email! It must end with @gmail.com, @outlook.com, or @lpu.in: ";
+        cin >> email;
+    }
+
+    students.push_back(Student(fName, lName, regNum, phone, email));
+    saveStudents();
+    cout << "\nThe student has been successfully registered.\n";
+}
+
+
+    void addBook()
+    {
+        string bName, auth, id;
+        int num;
+    
+        cout << "\nEnter book name: ";
+        cin.ignore();
+        getline(cin, bName);
+        while (!regex_match(bName, regex("^[a-zA-Z0-9 .,-]+$")))
+        {
+            cout << "Invalid book name! Only letters, numbers, spaces, and basic punctuation allowed: ";
+            getline(cin, bName);
+        }
+    
+        cout << "Enter author name: ";
+        getline(cin, auth);
+        while (!regex_match(auth, regex("^[a-zA-Z .,-]+$")))
+        {
+            cout << "Invalid author name! Only letters, spaces, and basic punctuation allowed: ";
+            getline(cin, auth);
+        }
+    
+        cout << "Enter ISBN (13 digits): ";
+        cin >> id;
+        while (id.length() != 13 || !all_of(id.begin(), id.end(), ::isdigit))
+        {
+            cout << "Invalid ISBN! It must be exactly 13 digits: ";
+            cin >> id;
+        }
+    
+        cout << "Enter number of copies: ";
+        num = getIntInput();
+    
+        // Check if book already exists
+        for (auto &book : books)
+        {
+            if (book.isbn == id)
+            {
+                book.copies += num;
+                saveBooks();
+                cout << "\nThe book already exists. Updated copies count.\n";
+                return;
+            }
+        }
+    
+        books.push_back(Record(bName, auth, id, num));
         saveBooks();
-        cout << "✅ Book added successfully!\n";
+        cout << "\nThe book has been successfully added.\n";
     }
+    
+    void deleteBook()
+    {
+        string id;
+        cout << "\nEnter ISBN to delete: ";
+        cin >> id;
 
-    // Remove a book
-    void removeBook() {
-        string isbn;
-        cout << "Enter ISBN to remove book: ";
-        cin >> isbn;
+        for (auto it = books.begin(); it != books.end(); ++it)
+        {
+            if (it->isbn == id)
+            {
+                cout << "Enter number of copies to remove: ";
+                int num;
+                num = getIntInput();
 
-        for (auto it = books.begin(); it != books.end(); ++it) {
-            if (it->isbn == isbn) {
-                books.erase(it);
+                if (num >= it->copies)
+                {
+                    books.erase(it);
+                    cout << "\nAll copies of the book have been removed from the inventory.\n";
+                }
+                else
+                {
+                    it->copies -= num;
+                    cout << "\n"
+                         << num << " copies have been removed. Remaining: " << it->copies << endl;
+                }
+
                 saveBooks();
-                cout << "✅ Book removed successfully!\n";
                 return;
             }
         }
-        cout << "❌ Book not found!\n";
+        cout << "\nBook not found in the inventory.\n";
     }
 
-    // Display all books
-    void displayBooks() {
-        cout << "\nAvailable Books:\n";
-        for (auto &book : books) {
-            cout << "Name: " << book.name
-                 << "\nNumber: " << book.number
-                 << "\nAuthor: " << book.author
-                 << "\nISBN: " << book.isbn
-                 << "\nIssued: " << (book.issued ? "Yes" : "No")
-                 << "\n-----------------------\n";
-        }
-    }
-
-    // Issue a book (User A)
-    void issueBook() {
-        string isbn;
-        cout << "Enter ISBN to issue a book: ";
-        cin >> isbn;
-
-        for (auto &book : books) {
-            if (book.isbn == isbn && !book.issued) {
-                book.issued = true;
+    void updateBook()
+    {
+        string id;
+        cout << "\nEnter ISBN to update: ";
+        cin >> id;
+        for (auto &book : books)
+        {
+            if (book.isbn == id)
+            {
+                cout << "Enter new number of copies: ";
+                cin >> book.copies;
                 saveBooks();
-                cout << "✅ Book issued successfully!\n";
+                cout << "\nThe book details have been successfully updated.\n";
                 return;
             }
         }
-        cout << "❌ Book not available or already issued!\n";
+        cout << "\nBook not found in the inventory.\n";
     }
 
-    // Return a book (User B)
-    void returnBook() {
-        string isbn;
-        cout << "Enter ISBN to return a book: ";
-        cin >> isbn;
+    void showAllBooks()
+    {
+        if (books.empty())
+        {
+            cout << "\nThe library inventory is currently empty.\n";
+        }
+        else
+        {
+            cout << "\n===============================\nList of All Books\n===============================\n";
+            cout << left << setw(30) << "Book Name" << setw(25) << "Author" << setw(20) << "ISBN" << "Copies\n";
+            cout << "---------------------------------------------------------------\n";
+            for (const auto &book : books)
+            {
+                cout << left << setw(30) << book.bookName << setw(25) << book.author << setw(20) << book.isbn << book.copies << endl;
+            }
+        }
+    }
 
-        for (auto &book : books) {
-            if (book.isbn == isbn && book.issued) {
-                book.issued = false;
+    void issueBook()
+{
+    string id;
+    cout << "\nEnter ISBN: ";
+    cin >> id;
+
+    auto bookIt = find_if(books.begin(), books.end(), [&](const Record &b)
+                          { return b.isbn == id && b.copies > 0; });
+
+    if (bookIt == books.end())
+    {
+        cout << "\nThe requested book is not available or not found in the inventory.\n";
+        return;
+    }
+
+    // Get student details
+    string regNum;
+    cout << "Enter student registration number (8 digits): ";
+    cin >> regNum;
+    while (regNum.length() != 8 || !all_of(regNum.begin(), regNum.end(), ::isdigit))
+    {
+        cout << "Invalid registration number! It must be an 8-digit number: ";
+        cin >> regNum;
+    }
+
+    // Check if the student already has 3 books issued
+    if (studentBookCount[regNum] >= 3)
+    {
+        cout << "\nThis student has already issued 3 books and cannot issue more.\n";
+        return;
+    }
+
+    // Issue the book
+    bookIt->copies--;
+    studentBookCount[regNum]++;
+
+    saveBooks();
+    logIssuedBook(regNum, bookIt->bookName, bookIt->author, bookIt->isbn);
+
+    // Display receipt for the issued book
+    cout << "\nThe book has been successfully issued.\n";
+    cout << "============================================\n";
+    cout << "Receipt for Book Issue\n";
+    cout << "--------------------------------------------\n";
+    cout << "Book Name: " << bookIt->bookName << "\nAuthor: " << bookIt->author << "\nISBN: " << bookIt->isbn << "\n";
+    cout << "Student Registration Number: " << regNum << "\n";
+    cout << "--------------------------------------------\n";
+}
+
+
+    void logIssuedBook(const string &regNum, const string &bookName, const string &author, const string &isbn)
+    {
+        ofstream logFile("issued_books.txt", ios::app);
+        if (logFile.is_open())
+        {
+            time_t now = time(0);
+            char *dt = ctime(&now);
+            dt[strlen(dt) - 1] = '\0';
+
+            logFile << regNum << " " << bookName << " " << author << " " << isbn << " " << dt << endl;
+            logFile.close();
+        }
+        else
+        {
+            cout << "Error: Unable to open issued books log file.\n";
+        }
+    }
+
+    void returnBook()
+    {
+        string id;
+        cout << "\nEnter ISBN of the book to return: ";
+        cin >> id;
+    
+        bool bookFound = false;
+        for (auto &book : books)
+        {
+            if (book.isbn == id)
+            {
+                book.copies++;
+                bookFound = true;
+    
+                // Get student details to display
+                string fName, lName, regNum;
+                cout << "\nEnter student first name: ";
+                cin >> fName;
+                cout << "Enter student last name: ";
+                cin >> lName;
+                cout << "Enter student registration number: ";
+                cin >> regNum;
+    
+                cout << "\nThe book has been successfully returned.\n";
+                cout << "============================================\n";
+                cout << "Receipt for Book Return\n";
+                cout << "--------------------------------------------\n";
+                cout << "Book Name: " << book.bookName << "\nAuthor: " << book.author << "\nISBN: " << book.isbn << "\n";
+                cout << "Student Name: " << fName << " " << lName << "\nRegistration Number: " << regNum << "\n";
+                cout << "--------------------------------------------\n";
+    
+                // Update the issued books log file
+                removeIssuedBookLog(regNum, id);
+    
                 saveBooks();
-                cout << "✅ Book returned successfully!\n";
+                saveStudents();
                 return;
             }
         }
-        cout << "❌ Book not found or not issued!\n";
+    
+        if (!bookFound)
+        {
+            cout << "\nInvalid ISBN. Book not found in the inventory.\n";
+        }
     }
-
-    // Librarian Menu
-    void librarianMenu() {
-        string password;
-        cout << "Enter Librarian Password: ";
-        cin >> password;
-
-        if (password != librarianPassword) {
-            cout << "❌ Incorrect Password!\n";
+    
+    void removeIssuedBookLog(const string &regNum, const string &isbn)
+    {
+        ifstream inFile("issued_books.txt");
+        ofstream outFile("temp.txt");
+    
+        if (!inFile || !outFile)
+        {
+            cout << "Error: Unable to open issued books log file.\n";
             return;
         }
-
-        int choice;
-        do {
-            cout << "\nLibrarian Menu:\n"
-                 << "1. Add Book\n"
-                 << "2. Remove Book\n"
-                 << "3. Display Books\n"
-                 << "4. Exit\n"
-                 << "Enter choice: ";
-            cin >> choice;
-
-            switch (choice) {
-                case 1: addBook(); break;
-                case 2: removeBook(); break;
-                case 3: displayBooks(); break;
-                case 4: return;
-                default: cout << "❌ Invalid choice!\n";
+    
+        string line;
+        bool bookFound = false;
+    
+        while (getline(inFile, line))
+        {
+            stringstream ss(line);
+            string student, bookName, author, bookIsbn;
+            getline(ss, student, ' ');
+            getline(ss, bookName, ' ');
+            getline(ss, author, ' ');
+            getline(ss, bookIsbn, ' ');
+    
+            if (student == regNum && bookIsbn == isbn)
+            {
+                bookFound = true;
             }
-        } while (choice != 4);
+            else
+            {
+                outFile << line << endl; // Write the line if it's not the returned book
+            }
+        }
+    
+        inFile.close();
+        outFile.close();
+    
+        if (bookFound)
+        {
+            remove("issued_books.txt"); // Remove the original log file
+            rename("temp.txt", "issued_books.txt"); // Rename the temp file to update the log
+            cout << "\nIssued book log updated successfully.\n";
+        }
+        else
+        {
+            cout << "\nError: No record of this book being issued to this student.\n";
+        }
     }
 
-    // User Menu
-    void userMenu(char type) {
-        string password;
-        cout << "Enter User " << type << " Password: ";
-        cin >> password;
+    
 
-        if ((type == 'A' && password != userAPassword) || (type == 'B' && password != userBPassword)) {
-            cout << "❌ Incorrect Password!\n";
-            return;
+    void showAllStudents()
+    {
+        if (students.empty())
+        {
+            cout << "\nNo students have been registered yet.\n";
+        }
+        else
+        {
+            cout << "\n===============================\nList of All Students\n===============================\n";
+            cout << left << setw(25) << "First Name" << setw(25) << "Last Name" << setw(20) << "Reg. Number" << setw(15) << "Phone" << "Email\n";
+            cout << "---------------------------------------------------------------\n";
+            for (const auto &student : students)
+            {
+                cout << left << setw(25) << student.firstName << setw(25) << student.lastName
+                     << setw(20) << student.regNumber << setw(15) << student.phone << student.email << endl;
+            }
+        }
+    }
+
+    bool authenticate(string role)
+    {
+        string password;
+        int &attempts = (role == "Librarian") ? librarianAttempts : counterAttempts;
+
+        while (attempts > 0)
+        {
+            cout << "\nEnter password: ";
+            cin >> password;
+
+            if ((role == "Librarian" && password == librarianPassword) ||
+                (role == "Counter" && password == counterPassword))
+            {
+                cout << "\nWelcome " << role << "!\n";
+                logLoginAttempt(role, true); // Log successful login
+                return true;
+            }
+            else
+            {
+                attempts--;
+                cout << "\nIncorrect password! Attempts left: " << attempts << "\n";
+                logLoginAttempt(role, false); // Log failed login
+            }
         }
 
-        int choice;
-        do {
-            cout << "\nUser " << type << " Menu:\n"
-                 << (type == 'A' ? "1. Issue Book\n" : "1. Return Book\n")
-                 << "2. View Available Books\n"
-                 << "3. Exit\n"
-                 << "Enter choice: ";
-            cin >> choice;
+        cout << "\nToo many failed attempts. Access denied.\n";
+        return false;
+    }
 
-            if (type == 'A' && choice == 1) issueBook();
-            if (type == 'B' && choice == 1) returnBook();
-            if (choice == 2) displayBooks();
-            if (choice == 3) return;
-        } while (choice != 3);
+    void logLoginAttempt(const string &role, bool success)
+    {
+        ofstream logFile("login_log.txt", ios::app);
+        if (logFile.is_open())
+        {
+            time_t now = time(0);
+            char *dt = ctime(&now);
+            dt[strlen(dt) - 1] = '\0';
+
+            logFile << "Role: " << role << ", Success: " << (success ? "Yes" : "No") << ", Time: " << dt << endl;
+            logFile.close();
+        }
+        else
+        {
+            cout << "Unable to open log file.\n";
+        }
+    }
+
+    // Function to safely read an integer input
+    int getIntInput()
+    {
+        int choice;
+        while (true)
+        {
+            cin >> choice;
+            if (cin.fail())
+            {
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cout << "Invalid input! Please enter a valid number: ";
+            }
+            else
+            {
+                break;
+            }
+        }
+        return choice;
     }
 };
 
-// Main function
-int main() {
-    LMS system;
+int main()
+{
+    cout << "\n==============================\n Welcome to the Library Management System!\n==============================\n";
+    LMS library;
     int choice;
+    do
+    {
+        cout << "\n1. Librarian\n2. Counter\n3. Exit\nEnter choice: ";
+        choice = library.getIntInput();
 
-    do {
-        cout << "\nWelcome to Library Management System\n"
-             << "1. Librarian\n"
-             << "2. User A (Issue Books)\n"
-             << "3. User B (Return Books)\n"
-             << "4. Exit\n"
-             << "Enter choice: ";
-        cin >> choice;
-
-        switch (choice) {
-            case 1: system.librarianMenu(); break;
-            case 2: system.userMenu('A'); break;
-            case 3: system.userMenu('B'); break;
-            case 4: cout << "Exiting...\n"; break;
-            default: cout << "❌ Invalid choice!\n";
+        if (choice == 1)
+        {
+            if (library.authenticate("Librarian"))
+            {
+                int libChoice;
+                do
+                {
+                    cout << "\n1. Add Book\n2. Delete Book\n3. Update Book\n4. Show All Books\n5. Add Student\n6. Show All Students\n7. Logout\nEnter choice: ";
+                    libChoice = library.getIntInput();
+                    switch (libChoice)
+                    {
+                    case 1:
+                        library.addBook();
+                        break;
+                    case 2:
+                        library.deleteBook();
+                        break;
+                    case 3:
+                        library.updateBook();
+                        break;
+                    case 4:
+                        library.showAllBooks();
+                        break;
+                    case 5:
+                        library.addStudent();
+                        break;
+                    case 6:
+                        library.showAllStudents();
+                        break;
+                    case 7:
+                        break;
+                    default:
+                        cout << "Invalid option! Please try again.\n";
+                    }
+                } while (libChoice != 7);
+            }
         }
-    } while (choice != 4);
+        else if (choice == 2)
+        {
+            if (library.authenticate("Counter"))
+            {
+                int counterChoice;
+                do
+                {
+                    cout << "\n1. Issue Book\n2. Return Book\n3. Show All Books\n4. Show All Students\n5. Logout\nEnter choice: ";
+                    counterChoice = library.getIntInput();
+                    switch (counterChoice)
+                    {
+                    case 1:
+                        library.issueBook();
+                        break;
+                    case 2:
+                        library.returnBook();
+                        break;
+                    case 3:
+                        library.showAllBooks();
+                        break;
+                    case 4:
+                        library.showAllStudents();
+                        break;
+                    case 5:
+                        break;
+                    default:
+                        cout << "Invalid option! Please try again.\n";
+                    }
+                } while (counterChoice != 5);
+            }
+        }
+        else if (choice != 3)
+        {
+            cout << "Invalid choice, try again.\n";
+        }
+
+    } while (choice != 3);
 
     return 0;
 }
